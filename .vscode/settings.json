@@ -1,0 +1,32 @@
+{
+    "php.validate.enable": false,
+    "php.suggest.basic": false,
+    "php.validate.executablePath": "/usr/bin/php",
+    "intelephense.environment.phpVersion": "8.3.6",
+    "intelephense.diagnostics.enable": true,
+    "intelephense.diagnostics.unexpectedTokens": false,
+    "intelephense.diagnostics.undefinedTypes": false,
+    "intelephense.diagnostics.undefinedFunctions": false,
+    "intelephense.diagnostics.undefinedConstants": false,
+    "intelephense.diagnostics.undefinedClassConstants": false,
+    "intelephense.diagnostics.undefinedMethods": false,
+    "intelephense.diagnostics.undefinedProperties": false,
+    "intelephense.diagnostics.undefinedVariables": false,
+    "intelephense.diagnostics.argumentCount": false,
+    "intelephense.diagnostics.typeErrors": false,
+    "intelephense.diagnostics.deprecated": false,
+    "files.exclude": {
+        "**/var/cache": true,
+        "**/var/log": true,
+        "**/.git": true
+    },
+    "files.watcherExclude": {
+        "**/vendor/**": true,
+        "**/var/**": true,
+        "**/.git/**": true
+    },
+    "search.exclude": {
+        "**/vendor": true,
+        "**/var": true
+    }
+}
