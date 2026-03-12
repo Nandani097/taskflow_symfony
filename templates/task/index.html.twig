@@ -1,0 +1,40 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Task List
+{% endblock %}
+
+{% block body %}
+	<h1>Task List</h1>
+
+	<a href="{{ path('app_task_new') }}" class="btn btn-success mb-3">+ New Task</a>
+
+	<table class="table">
+		<thead>
+			<tr>
+				<th>Title</th>
+				<th>Status</th>
+				<th>Priority</th>
+				<th>Created</th>
+				<th>Actions</th>
+			</tr>
+		</thead>
+		<tbody>
+			{% for task in tasks %}
+				<tr>
+					<td>{{ task.title }}</td>
+					<td>{{ task.status }}</td>
+					<td>{{ task.priority }}</td>
+					<td>{{ task.createdAt|date('Y-m-d H:i') }}</td>
+					<td>
+						<a href="{{ path('app_task_show', {'id': task.id}) }}" class="btn btn-sm btn-info">View</a>
+						<a href="{{ path('app_task_edit', {'id': task.id}) }}" class="btn btn-sm btn-warning">Edit</a>
+					</td>
+				</tr>
+			{% else %}
+				<tr>
+					<td colspan="5" class="text-center">No tasks found</td>
+				</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+{% endblock %}

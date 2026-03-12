@@ -1,0 +1,54 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Task #{{ task.id }}{% endblock %}
+
+{% block body %}
+<div class="container">
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h4>Task Details</h4>
+        </div>
+        <div class="card-body">
+            <h2>{{ task.title }}</h2>
+            <p>{{ task.description ?: 'No description provided.' }}</p>
+            
+            <div class="row">
+                <div class="col-md-4">
+                    <strong>Status:</strong>
+                    <span class="badge bg-{{ task.status == 'completed' ? 'success' : (task.status == 'in_progress' ? 'warning' : 'secondary') }}">
+                        {{ task.status }}
+                    </span>
+                </div>
+                <div class="col-md-4">
+                    <strong>Priority:</strong>
+                    <span class="badge bg-{{ task.priority == 'high' ? 'danger' : (task.priority == 'medium' ? 'info' : 'secondary') }}">
+                        {{ task.priority }}
+                    </span>
+                </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <strong>Created:</strong>
+                    <p>{{ task.createdAt|date('F j, Y \\a\\t g:i a') }}</p>
+                </div>
+                {% if task.updatedAt %}
+                <div class="col-md-6">
+                    <strong>Last Updated:</strong>
+                    <p>{{ task.updatedAt|date('F j, Y \\a\\t g:i a') }}</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="mt-4">
+                <a href="{{ path('app_task_index') }}" class="btn btn-secondary">Back</a>
+                <a href="{{ path('app_task_edit', {'id': task.id}) }}" class="btn btn-warning">Edit</a>
+                <form method="post" action="{{ path('app_task_delete', {'id': task.id}) }}" style="display:inline">
+                    <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ task.id) }}">
+                    <button class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

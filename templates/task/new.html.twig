@@ -1,0 +1,127 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Create New Task
+{% endblock %}
+
+{% block body %}
+	<div class="container">
+		<div class="row justify-content-center">
+			<div class="col-md-8">
+				<div class="card shadow-sm">
+					<div class="card-header bg-primary text-white">
+						<h4 class="mb-0">
+							<i class="bi bi-plus-circle"></i>
+							Create New Task
+						</h4>
+					</div>
+					<div class="card-body">
+						{{ form_start(form, {'attr': {'class': 'needs-validation'}}) }}
+
+						<div class="mb-3">
+							{{ form_label(form.title, 'Title', {'label_attr': {'class': 'form-label fw-bold'}}) }}
+							{{ form_widget(form.title, {'attr': {'class': 'form-control', 'placeholder': 'Enter task title'}}) }}
+							{{ form_errors(form.title, {'attr': {'class': 'text-danger'}}) }}
+						</div>
+
+						<div class="mb-3">
+							{{ form_label(form.description, 'Description', {'label_attr': {'class': 'form-label fw-bold'}}) }}
+							{{ form_widget(form.description, {'attr': {'class': 'form-control', 'rows': 3, 'placeholder': 'Enter task description (optional)'}}) }}
+							{{ form_errors(form.description, {'attr': {'class': 'text-danger'}}) }}
+						</div>
+
+						<div class="row">
+							<div class="mb-3">
+								{{ form_label(form.status, 'Status', {'label_attr': {'class': 'form-label fw-bold'}}) }}
+								{{ form_widget(form.status, {'attr': {'class': 'form-select'}}) }}
+								{{ form_errors(form.status, {'attr': {'class': 'text-danger'}}) }}
+							</div>
+
+							<div class="mb-3">
+								{{ form_label(form.priority, 'Priority', {'label_attr': {'class': 'form-label fw-bold'}}) }}
+								{{ form_widget(form.priority, {'attr': {'class': 'form-select'}}) }}
+								{{ form_errors(form.priority, {'attr': {'class': 'text-danger'}}) }}
+							</div>
+						</div>
+
+						<div class="d-flex justify-content-between mt-4">
+							<a href="{{ path('app_task_index') }}" class="btn btn-secondary">
+								<i class="bi bi-arrow-left"></i>
+								Cancel
+							</a>
+							<button type="submit" class="btn btn-primary">
+								<i class="bi bi-save"></i>
+								Save Task
+							</button>
+						</div>
+
+						{{ form_end(form) }}
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+{% endblock %}
+
+
+{# {% extends 'base.html.twig' %}
+
+{% block title %}Create New Task
+{% endblock %}
+
+{% block body %}
+	<div class="container">
+		<div class="row justify-content-center">
+			<div class="col-md-8">
+				<div class="card">
+					<div class="card-header bg-primary text-white">
+						<h4 class="mb-0">Create New Task</h4>
+					</div>
+					<div class="card-body">
+						<form
+							method="post">
+							<!-- Title field -->
+							<div class="mb-3">
+								<label for="title" class="form-label">Title
+									<span class="text-danger">*</span>
+								</label>
+								<input type="text" class="form-control" id="title" name="title" required>
+							</div>
+
+							<!-- Description field -->
+							<div class="mb-3">
+								<label for="description" class="form-label">Description</label>
+								<textarea class="form-control" id="description" name="description" rows="3"></textarea>
+							</div>
+
+							<!-- Status dropdown -->
+							<div class="mb-3">
+								<label for="status" class="form-label">Status</label>
+								<select class="form-control" id="status" name="status">
+									<option value="pending" selected>Pending</option>
+									<option value="in_progress">In Progress</option>
+									<option value="completed">Completed</option>
+								</select>
+							</div>
+
+							<!-- Priority dropdown -->
+							<div class="mb-3">
+								<label for="priority" class="form-label">Priority</label>
+								<select class="form-control" id="priority" name="priority">
+									<option value="low">Low</option>
+									<option value="medium" selected>Medium</option>
+									<option value="high">High</option>
+								</select>
+							</div>
+
+							<!-- Buttons -->
+							<div class="d-flex justify-content-between">
+								<a href="{{ path('app_task_index') }}" class="btn btn-secondary">Cancel</a>
+								<button type="submit" class="btn btn-primary">Create Task</button>
+							</div>
+						</form>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+{% endblock %} #}
