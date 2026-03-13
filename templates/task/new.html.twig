@@ -20,26 +20,26 @@
 						<div class="mb-3">
 							{{ form_label(form.title, 'Title', {'label_attr': {'class': 'form-label fw-bold'}}) }}
 							{{ form_widget(form.title, {'attr': {'class': 'form-control', 'placeholder': 'Enter task title'}}) }}
-							{{ form_errors(form.title, {'attr': {'class': 'text-danger'}}) }}
+							<div class="text-danger">{{ form_errors(form.title) }}</div>
 						</div>
 
 						<div class="mb-3">
 							{{ form_label(form.description, 'Description', {'label_attr': {'class': 'form-label fw-bold'}}) }}
 							{{ form_widget(form.description, {'attr': {'class': 'form-control', 'rows': 3, 'placeholder': 'Enter task description (optional)'}}) }}
-							{{ form_errors(form.description, {'attr': {'class': 'text-danger'}}) }}
+							<div class="text-danger">{{ form_errors(form.description) }}</div>
 						</div>
 
 						<div class="row">
 							<div class="mb-3">
 								{{ form_label(form.status, 'Status', {'label_attr': {'class': 'form-label fw-bold'}}) }}
 								{{ form_widget(form.status, {'attr': {'class': 'form-select'}}) }}
-								{{ form_errors(form.status, {'attr': {'class': 'text-danger'}}) }}
+								<div class="text-danger">{{ form_errors(form.status) }}</div>
 							</div>
 
 							<div class="mb-3">
 								{{ form_label(form.priority, 'Priority', {'label_attr': {'class': 'form-label fw-bold'}}) }}
 								{{ form_widget(form.priority, {'attr': {'class': 'form-select'}}) }}
-								{{ form_errors(form.priority, {'attr': {'class': 'text-danger'}}) }}
+								<div class="text-danger">{{ form_errors(form.priority) }}</div>
 							</div>
 						</div>
 
