@@ -10,7 +10,9 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
+#[IsGranted('ROLE_USER')]
 class TaskController extends AbstractController
 {
     // Constructor injection of TaskService
@@ -93,9 +95,9 @@ class TaskController extends AbstractController
         ]);
     }
 
-    // EDIT task
+    // EDIT task Using Symfony Form Component
     #[Route('/task/{id}/edit', name: 'app_task_edit', requirements: ['id' => '\d+'])]
-    public function edit(Request $request, int $id): Response
+    public function edit(Request $request, int $id, EntityManagerInterface $entityManager): Response
     {
         $task = $this->taskService->getTask($id);
 
@@ -103,22 +105,23 @@ class TaskController extends AbstractController
             throw $this->createNotFoundException('Task not found');
         }
 
-        if ($request->isMethod('POST')) {
-            $data = [
-                'title' => $request->request->get('title'),
-                'description' => $request->request->get('description'),
-                'status' => $request->request->get('status'),
-                'priority' => $request->request->get('priority'),
-            ];
+        // Create form pre-filled with existing task data
+        $form = $this->createForm(TaskType::class, $task);
 
-            $this->taskService->updateTask($task, $data);
+        // Handle request (automatic data binding)
+        $form->handleRequest($request);
+
+        // Check if form was submitted and is valid
+        if ($form->isSubmitted() && $form->isValid()) {
+            $entityManager->flush(); // No need to persist — task already exists in DB
+
             $this->addFlash('success', 'Task updated successfully!');
-
             return $this->redirectToRoute('app_task_show', ['id' => $task->getId()]);
         }
 
         return $this->render('task/edit.html.twig', [
             'task' => $task,
+            'form' => $form->createView(),
         ]);
     }
 
