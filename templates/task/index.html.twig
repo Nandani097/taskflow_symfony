@@ -1,40 +1,100 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Task List
-{% endblock %}
-
 {% block body %}
-	<h1>Task List</h1>
+	<div class="container">
+		<div class="d-flex justify-content-between align-items-center mb-4">
+			<h1>Task List</h1>
+			<a href="{{ path('app_task_new') }}" class="btn btn-success">
+				<i class="bi bi-plus-circle"></i>
+				New Task
+			</a>
+		</div>
 
-	<a href="{{ path('app_task_new') }}" class="btn btn-success mb-3">+ New Task</a>
+		<table class="table table-striped align-middle">
+			<thead class="table-dark">
+				<tr>
+					<th>Title</th>
+					<th>Status</th>
+					<th>Priority</th>
+					<th>Comments</th>
+					<th>Created</th>
+					<th>Actions</th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for task in tasks %}
+					<tr class="{{ task.isDeleted ? 'table-secondary' : '' }}">
 
-	<table class="table">
-		<thead>
-			<tr>
-				<th>Title</th>
-				<th>Status</th>
-				<th>Priority</th>
-				<th>Created</th>
-				<th>Actions</th>
-			</tr>
-		</thead>
-		<tbody>
-			{% for task in tasks %}
-				<tr>
-					<td>{{ task.title }}</td>
-					<td>{{ task.status }}</td>
-					<td>{{ task.priority }}</td>
-					<td>{{ task.createdAt|date('Y-m-d H:i') }}</td>
-					<td>
-						<a href="{{ path('app_task_show', {'id': task.id}) }}" class="btn btn-sm btn-info">View</a>
-						<a href="{{ path('app_task_edit', {'id': task.id}) }}" class="btn btn-sm btn-warning">Edit</a>
-					</td>
-				</tr>
-			{% else %}
-				<tr>
-					<td colspan="5" class="text-center">No tasks found</td>
-				</tr>
-			{% endfor %}
-		</tbody>
-	</table>
+						<td>
+							{{ task.title }}
+							{% if task.isDeleted %}
+								<span class="ms-1" title="Read-only mode">🔒</span>
+							{% endif %}
+						</td>
+
+						<td>
+							<span class="badge bg-{{
+								                            task.status == 'completed' ? 'success' :
+								                            (task.status == 'in_progress' ? 'warning' : 'secondary')
+								                        }}">{{ task.status }}</span>
+						</td>
+
+						<td>
+							<span class="badge bg-{{
+								                            task.priority == 'high' ? 'danger' :
+								                            (task.priority == 'medium' ? 'info' : 'secondary')
+								                        }}">{{ task.priority }}</span>
+						</td>
+
+						<td>
+							<span class="badge bg-info text-dark">
+								<i class="bi bi-chat"></i>
+								{{ task.comments|length }}
+							</span>
+						</td>
+
+						<td>{{ task.createdAt|date('Y-m-d H:i') }}</td>
+
+						<td>
+							{# View — always active #}
+							<a href="{{ path('app_task_show', {'id': task.id}) }}" class="btn btn-sm btn-info">
+								<i class="bi bi-eye"></i>
+								View
+							</a>
+
+							{# Edit — greyed out for soft-deleted, active for normal #}
+							{% if task.isDeleted %}
+								<button type="button" class="btn btn-sm" disabled title="Task is in read-only mode" style="background-color:#6c757d; color:#fff; opacity:0.5; cursor:not-allowed; border:none;">
+									<i class="bi bi-pencil"></i>
+									Edit
+								</button>
+							{% else %}
+								<a href="{{ path('app_task_edit', {'id': task.id}) }}" class="btn btn-sm btn-warning">
+									<i class="bi bi-pencil"></i>
+									Edit
+								</a>
+							{% endif %}
+
+							{# Delete — always hard deletes permanently #}
+							<form method="post" action="{{ path('app_task_delete', {'id': task.id}) }}" style="display:inline">
+								<input type="hidden" name="_token" value="{{ csrf_token('delete' ~ task.id) }}">
+								<button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Permanently delete this task?')">
+									<i class="bi bi-trash"></i>
+									Delete
+								</button>
+							</form>
+						</td>
+
+					</tr>
+				{% else %}
+					<tr>
+						<td colspan="6" class="text-center text-muted py-4">
+							<i class="bi bi-inbox fs-4 d-block mb-2"></i>
+							No tasks found
+						</td>
+					</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	</div>
 {% endblock %}
