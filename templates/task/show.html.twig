@@ -1,54 +1,180 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Task #{{ task.id }}{% endblock %}
-
 {% block body %}
-<div class="container">
-    <div class="card">
-        <div class="card-header bg-primary text-white">
-            <h4>Task Details</h4>
-        </div>
-        <div class="card-body">
-            <h2>{{ task.title }}</h2>
-            <p>{{ task.description ?: 'No description provided.' }}</p>
-            
-            <div class="row">
-                <div class="col-md-4">
-                    <strong>Status:</strong>
-                    <span class="badge bg-{{ task.status == 'completed' ? 'success' : (task.status == 'in_progress' ? 'warning' : 'secondary') }}">
-                        {{ task.status }}
-                    </span>
-                </div>
-                <div class="col-md-4">
-                    <strong>Priority:</strong>
-                    <span class="badge bg-{{ task.priority == 'high' ? 'danger' : (task.priority == 'medium' ? 'info' : 'secondary') }}">
-                        {{ task.priority }}
-                    </span>
-                </div>
-            </div>
+	<div class="container">
 
-            <div class="row mt-3">
-                <div class="col-md-6">
-                    <strong>Created:</strong>
-                    <p>{{ task.createdAt|date('F j, Y \\a\\t g:i a') }}</p>
-                </div>
-                {% if task.updatedAt %}
-                <div class="col-md-6">
-                    <strong>Last Updated:</strong>
-                    <p>{{ task.updatedAt|date('F j, Y \\a\\t g:i a') }}</p>
-                </div>
-                {% endif %}
-            </div>
+		{% if isReadOnly %}
+			<div class="alert alert-warning d-flex align-items-center gap-2 mb-3">
+				<i class="bi bi-lock-fill"></i>
+				<strong>Read-only mode</strong>
+				— This task has been deleted. No edits or comments are allowed.
+			</div>
+		{% endif %}
 
-            <div class="mt-4">
-                <a href="{{ path('app_task_index') }}" class="btn btn-secondary">Back</a>
-                <a href="{{ path('app_task_edit', {'id': task.id}) }}" class="btn btn-warning">Edit</a>
-                <form method="post" action="{{ path('app_task_delete', {'id': task.id}) }}" style="display:inline">
-                    <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ task.id) }}">
-                    <button class="btn btn-danger">Delete</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+		<div
+			class="row">
+			<!-- LEFT: Task Details + Comments -->
+			<div
+				class="col-md-8">
+
+				<!-- Task Details Card -->
+				<div class="card mb-4 {{ isReadOnly ? 'border-secondary opacity-75' : '' }}">
+					<div class="card-header {{ isReadOnly ? 'bg-secondary' : 'bg-primary' }} text-white d-flex justify-content-between align-items-center">
+						<h4 class="mb-0">
+							{% if isReadOnly %}
+								<i class="bi bi-lock-fill me-2"></i>
+							{% endif %}
+							{{ task.title }}
+						</h4>
+						{% if isReadOnly %}
+							<span class="badge bg-light text-secondary">Deleted</span>
+						{% endif %}
+					</div>
+					<div class="card-body">
+						<p>
+							<strong>Description:</strong>
+							{{ task.description ?: 'No description' }}
+						</p>
+						<p>
+							<strong>Status:</strong>
+							<span class="badge bg-{{ task.status == 'completed' ? 'success' : (task.status == 'in_progress' ? 'warning' : 'secondary') }}">
+								{{ task.status }}
+							</span>
+							&nbsp;
+							<strong>Priority:</strong>
+							<span class="badge bg-{{ task.priority == 'high' ? 'danger' : (task.priority == 'medium' ? 'info' : 'secondary') }}">
+								{{ task.priority }}
+							</span>
+						</p>
+						<p>
+							<small>Created:
+								{{ task.createdAt|date('Y-m-d H:i:s') }}</small>
+						</p>
+
+						<div class="mt-3 d-flex gap-2">
+							<a href="{{ path('app_task_index') }}" class="btn btn-secondary">
+								<i class="bi bi-arrow-left"></i>
+								Back
+							</a>
+
+							{% if not isReadOnly %}
+								{# Edit — only when NOT read-only #}
+								<a href="{{ path('app_task_edit', {'id': task.id}) }}" class="btn btn-warning">
+									<i class="bi bi-pencil"></i>
+									Edit
+								</a>
+
+								{# Soft Delete — from show page → read-only mode #}
+								<form method="post" action="{{ path('app_task_soft_delete', {'id': task.id}) }}" class="d-inline">
+									<input type="hidden" name="_token" value="{{ csrf_token('soft-delete' ~ task.id) }}">
+									<button type="submit" class="btn btn-danger" onclick="return confirm('Move this task to read-only mode?')">
+										<i class="bi bi-trash"></i>
+										Delete
+									</button>
+								</form>
+							{% endif %}
+						</div>
+					</div>
+				</div>
+
+				<!-- COMMENTS SECTION -->
+				<div class="card {{ isReadOnly ? 'border-secondary opacity-75' : '' }}">
+					<div class="card-header {{ isReadOnly ? 'bg-secondary' : 'bg-info' }} text-white d-flex align-items-center gap-2">
+						<i class="bi bi-chat-dots"></i>
+						<h5 class="mb-0">Comments ({{ task.comments|length }})</h5>
+						{% if isReadOnly %}
+							<span class="ms-auto badge bg-light text-secondary">
+								<i class="bi bi-lock-fill"></i>
+								Locked
+							</span>
+						{% endif %}
+					</div>
+					<div class="card-body">
+
+						{% if not isReadOnly %}
+							{# Comment form — only shown when task is active #}
+							{{ form_start(commentForm, {'attr': {'class': 'mb-4'}}) }}
+							{{ form_widget(commentForm.content, {
+                                'attr': {
+                                    'class': 'form-control',
+                                    'rows': 2,
+                                    'placeholder': 'Write a comment...'
+                                }
+                            }) }}
+							{{ form_errors(commentForm.content) }}
+							<button type="submit" class="btn btn-info mt-2">
+								<i class="bi bi-send"></i>
+								Add Comment
+							</button>
+							{{ form_end(commentForm) }}
+							<hr>
+						{% else %}
+							<div class="alert alert-secondary py-2">
+								<i class="bi bi-lock-fill me-1"></i>
+								Comments are disabled for deleted tasks.
+							</div>
+						{% endif %}
+
+						{% for comment in task.comments %}
+							<div class="card mb-2 {{ isReadOnly ? 'bg-light' : '' }}">
+								<div class="card-body py-2">
+									<div class="d-flex justify-content-between">
+										<strong>{{ comment.user.email }}</strong>
+										<small class="text-muted">{{ comment.createdAt|date('Y-m-d H:i') }}</small>
+									</div>
+									<p class="mb-0 mt-1">{{ comment.content }}</p>
+									{# Delete comment only allowed when task is active #}
+									{% if not isReadOnly and comment.user == app.user %}
+										<div class="text-end mt-1">
+											<form method="post" action="{{ path('app_comment_delete', {'id': comment.id}) }}">
+												<input type="hidden" name="_token" value="{{ csrf_token('delete-comment' ~ comment.id) }}">
+												<button type="submit" class="btn btn-sm btn-outline-danger">
+													<i class="bi bi-trash"></i>
+													Delete
+												</button>
+											</form>
+										</div>
+									{% endif %}
+								</div>
+							</div>
+						{% else %}
+							<p class="text-muted">No comments yet.</p>
+						{% endfor %}
+
+					</div>
+				</div>
+
+			</div>
+
+			<!-- RIGHT: Activity Log -->
+			<div class="col-md-4">
+				<div class="card">
+					<div class="card-header bg-secondary text-white d-flex align-items-center gap-2">
+						<i class="bi bi-clock-history"></i>
+						<h5 class="mb-0">Activity Log</h5>
+					</div>
+					<div class="card-body" style="max-height: 500px; overflow-y: auto;">
+						{% for log in activityLogs %}
+							<div class="mb-3 pb-2 border-bottom">
+								<div class="d-flex justify-content-between align-items-center">
+									<span class="badge bg-{{
+											                                    log.eventType == 'TASK_CREATED'  ? 'success' :
+											                                    (log.eventType == 'STATUS_CHANGED' ? 'warning' :
+											                                    (log.eventType == 'TASK_DELETED'  ? 'danger'  : 'secondary'))
+											                                }}">
+										{{ log.eventType }}
+									</span>
+									<small class="text-muted">{{ log.createdAt|date('Y-m-d H:i') }}</small>
+								</div>
+								<p class="mb-0 mt-1 small">{{ log.eventMessage }}</p>
+							</div>
+						{% else %}
+							<p class="text-muted">No activity yet.</p>
+						{% endfor %}
+					</div>
+				</div>
+			</div>
+
+		</div>
+	</div>
 {% endblock %}
