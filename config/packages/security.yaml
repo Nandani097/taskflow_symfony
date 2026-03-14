@@ -32,11 +32,11 @@ security:
                 path: /
 
     access_control:
-        - { path: ^/task, roles: ROLE_USER }
-        - { path: ^/tasks, roles: ROLE_USER }
-        - { path: ^/login, roles: PUBLIC_ACCESS }
-        - { path: ^/register, roles: PUBLIC_ACCESS }
-        - { path: ^/$, roles: PUBLIC_ACCESS }
+         - { path: ^/task, roles: ROLE_USER }
+         - { path: ^/tasks, roles: ROLE_USER }
+         - { path: ^/login, roles: PUBLIC_ACCESS }
+         - { path: ^/register, roles: PUBLIC_ACCESS }
+         - { path: ^/$, roles: PUBLIC_ACCESS }
 
 when@test:
     security:
