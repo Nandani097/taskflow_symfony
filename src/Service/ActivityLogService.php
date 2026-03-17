@@ -6,11 +6,13 @@ use App\Entity\ActivityLog;
 use App\Entity\Task;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Contracts\Cache\CacheInterface;
 
 class ActivityLogService
 {
     public function __construct(
-        private EntityManagerInterface $entityManager
+        private EntityManagerInterface $entityManager,
+        private CacheService $cacheService
     ) {}
 
     public function logTaskCreated(Task $task, ?User $user = null): void
@@ -24,6 +26,8 @@ class ActivityLogService
 
         $this->entityManager->persist($log);
         $this->entityManager->flush();
+
+        $this->cacheService->invalidateTaskActivityLogs($task);
     }
 
     public function logStatusChanged(Task $task, ?User $user, string $oldStatus, string $newStatus): void
@@ -37,6 +41,8 @@ class ActivityLogService
 
         $this->entityManager->persist($log);
         $this->entityManager->flush();
+
+        $this->cacheService->invalidateTaskActivityLogs($task);
     }
 
     public function logTaskDeleted(Task $task, ?User $user = null): void
@@ -50,6 +56,8 @@ class ActivityLogService
 
         $this->entityManager->persist($log);
         $this->entityManager->flush();
+
+        $this->cacheService->invalidateTaskActivityLogs($task);
     }
 
     public function logCommentAdded(Task $task, ?User $user = null): void
@@ -63,13 +71,17 @@ class ActivityLogService
 
         $this->entityManager->persist($log);
         $this->entityManager->flush();
+
+        $this->cacheService->invalidateTaskActivityLogs($task);
     }
 
     public function getLogsForTask(Task $task): array
     {
-        return $this->entityManager
-            ->getRepository(ActivityLog::class)
-            ->findBy(['task' => $task], ['createdAt' => 'DESC']);
+        return $this->cacheService->getTaskActivityLogs($task, function () use ($task) {
+            return $this->entityManager
+                ->getRepository(ActivityLog::class)
+                ->findBy(['task' => $task], ['createdAt' => 'DESC']);
+        });
     }
 
     /**
@@ -77,15 +89,17 @@ class ActivityLogService
      */
     public function getReadOnlyLogsForTask(Task $task): array
     {
-        return $this->entityManager
-            ->getRepository(ActivityLog::class)
-            ->createQueryBuilder('a')
-            ->where('a.task = :task')
-            ->andWhere('a.event_type IN (:types)')
-            ->setParameter('task', $task)
-            ->setParameter('types', ['TASK_CREATED', 'STATUS_CHANGED', 'TASK_DELETED'])
-            ->orderBy('a.createdAt', 'DESC')
-            ->getQuery()
-            ->getResult();
+        return $this->cacheService->getTaskActivityLogs($task, function () use ($task) {
+            return $this->entityManager
+                ->getRepository(ActivityLog::class)
+                ->createQueryBuilder('a')
+                ->where('a.task = :task')
+                ->andWhere('a.event_type IN (:types)')
+                ->setParameter('task', $task)
+                ->setParameter('types', ['TASK_CREATED', 'STATUS_CHANGED', 'TASK_DELETED'])
+                ->orderBy('a.createdAt', 'DESC')
+                ->getQuery()
+                ->getResult();
+        });
     }
 }
