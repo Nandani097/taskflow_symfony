@@ -1,100 +1,202 @@
 {% extends 'base.html.twig' %}
 
+{% block title %}Tasks List{% endblock %}
+
 {% block body %}
-	<div class="container">
+	<div class="container py-4">
+		{# ── Header Area ── #}
 		<div class="d-flex justify-content-between align-items-center mb-4">
-			<h1>Task List</h1>
-			<a href="{{ path('app_task_new') }}" class="btn btn-success">
-				<i class="bi bi-plus-circle"></i>
-				New Task
+			<h2 class="fw-bold text-primary mb-0" style="letter-spacing: -0.5px;">
+				<i class="bi bi-kanban me-2"></i>Task Dashboard
+			</h2>
+			<a href="{{ path('app_task_new') }}" class="btn btn-primary shadow-sm rounded-pill px-4 fw-semibold border-0" style="background: linear-gradient(135deg, #0d6efd, #0b5ed7);">
+				<i class="bi bi-plus-lg me-1"></i> New Task
 			</a>
 		</div>
 
-		<table class="table table-striped align-middle">
-			<thead class="table-dark">
-				<tr>
-					<th>Title</th>
-					<th>Status</th>
-					<th>Priority</th>
-					<th>Comments</th>
-					<th>Created</th>
-					<th>Actions</th>
-				</tr>
-			</thead>
-			<tbody>
-				{% for task in tasks %}
-					<tr class="{{ task.isDeleted ? 'table-secondary' : '' }}">
+		{# ── Filter / Sort / Search Form Area ── #}
+		<div class="card border-0 shadow-sm rounded-4 mb-4">
+			<div class="card-body p-4">
+				<form method="get" action="{{ path('app_task_index') }}" class="row g-3 align-items-end">
+					{# keep sort & sort_dir as hidden so form submit preserves them #}
+					<input type="hidden" name="sort" value="{{ filters.sort }}">
+					<input type="hidden" name="sort_dir" value="{{ filters.sort_dir }}">
 
-						<td>
-							{{ task.title }}
-							{% if task.isDeleted %}
-								<span class="ms-1" title="Read-only mode">🔒</span>
-							{% endif %}
-						</td>
+					<div class="col-md-3">
+						<label class="form-label fw-bold text-muted small text-uppercase" style="letter-spacing: 0.5px;">Status</label>
+						<select name="status" class="form-select border-0 bg-light rounded-3 text-dark fw-medium">
+							<option value="" {{ filters.status == '' ? 'selected' : '' }}>All Statuses</option>
+							<option value="pending" {{ filters.status == 'pending' ? 'selected' : '' }}>Pending</option>
+							<option value="in_progress" {{ filters.status == 'in_progress' ? 'selected' : '' }}>In Progress</option>
+							<option value="completed" {{ filters.status == 'completed' ? 'selected' : '' }}>Completed</option>
+						</select>
+					</div>
 
-						<td>
-							<span class="badge bg-{{
-								                            task.status == 'completed' ? 'success' :
-								                            (task.status == 'in_progress' ? 'warning' : 'secondary')
-								                        }}">{{ task.status }}</span>
-						</td>
+					<div class="col-md-4">
+						<label class="form-label fw-bold text-muted small text-uppercase" style="letter-spacing: 0.5px;">Search Tasks</label>
+						<div class="input-group">
+							<span class="input-group-text border-0 bg-light rounded-start-3"><i class="bi bi-search text-muted"></i></span>
+							<input type="text" name="search" class="form-control border-0 bg-light rounded-end-3 fw-medium" value="{{ filters.search }}" placeholder="Type a title...">
+						</div>
+					</div>
 
-						<td>
-							<span class="badge bg-{{
-								                            task.priority == 'high' ? 'danger' :
-								                            (task.priority == 'medium' ? 'info' : 'secondary')
-								                        }}">{{ task.priority }}</span>
-						</td>
+					<div class="col-md-2">
+						<label class="form-label fw-bold text-muted small text-uppercase" style="letter-spacing: 0.5px;">Show</label>
+						<select name="show" class="form-select border-0 bg-light rounded-3 fw-medium text-dark">
+							<option value="5" {{ filters.show == 5 ? 'selected' : '' }}>5 items</option>
+							<option value="10" {{ filters.show == 10 ? 'selected' : '' }}>10 items</option>
+							<option value="25" {{ filters.show == 25 ? 'selected' : '' }}>25 items</option>
+						</select>
+					</div>
 
-						<td>
-							<span class="badge bg-info text-dark">
-								<i class="bi bi-chat"></i>
-								{{ task.comments|length }}
-							</span>
-						</td>
+					<div class="col-md-3 d-flex gap-2">
+						<button type="submit" class="btn btn-dark fw-semibold px-4 flex-grow-1 rounded-3 shadow-sm">Filter</button>
+						<a href="{{ path('app_task_index') }}" class="btn btn-light border text-danger px-3 rounded-3 shadow-sm" title="Clear Filters">
+							<i class="bi bi-x-lg"></i>
+						</a>
+					</div>
+				</form>
+			</div>
+		</div>
 
-						<td>{{ task.createdAt|date('Y-m-d H:i') }}</td>
+		{# ── Tasks Table Area ── #}
+		<div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+			<div class="table-responsive">
+				<table class="table table-hover align-middle mb-0">
+					<thead class="bg-light">
+						<tr>
+							<th class="py-3 ps-4 border-bottom-0 fw-bold text-dark text-uppercase small" style="letter-spacing: 0.5px;">
+								{{ knp_pagination_sortable(pagination, 'Title', 't.title', {}, {'class': 'text-dark text-decoration-none'}) }}
+							</th>
+							<th class="py-3 border-bottom-0 fw-bold text-dark text-uppercase small" style="letter-spacing: 0.5px;">
+								{{ knp_pagination_sortable(pagination, 'Status', 't.status', {}, {'class': 'text-dark text-decoration-none'}) }}
+							</th>
+							<th class="py-3 border-bottom-0 fw-bold text-dark text-uppercase small" style="letter-spacing: 0.5px;">Priority</th>
+							<th class="py-3 border-bottom-0 fw-bold text-dark text-uppercase small" style="letter-spacing: 0.5px;">
+								{{ knp_pagination_sortable(pagination, 'Created', 't.createdAt', {}, {'class': 'text-dark text-decoration-none'}) }}
+							</th>
+							<th class="py-3 border-bottom-0 fw-bold text-dark text-uppercase small text-center" style="letter-spacing: 0.5px;">
+								<i class="bi bi-chat-text me-1"></i> Comments
+							</th>
+							<th class="py-3 pe-4 border-bottom-0 fw-bold text-dark text-uppercase small text-end" style="letter-spacing: 0.5px;">Actions</th>
+						</tr>
+					</thead>
+					<tbody class="border-top-0">
+						{% for task in pagination %}
+							<tr class="{{ task.isDeleted ? 'bg-light text-muted' : '' }} custom-hover-row">
+								
+								<td class="ps-4 py-3 border-0 border-bottom border-light">
+									<div class="fw-bolder text-dark fs-6">{{ task.title }}</div>
+									{% if task.isDeleted %}
+										<span class="badge bg-secondary rounded-pill mt-1" style="font-size: 0.65rem; padding: 0.35em 0.65em;">
+											<i class="bi bi-lock-fill me-1"></i>Read Only
+										</span>
+									{% endif %}
+								</td>
 
-						<td>
-							{# View — always active #}
-							<a href="{{ path('app_task_show', {'id': task.id}) }}" class="btn btn-sm btn-info">
-								<i class="bi bi-eye"></i>
-								View
-							</a>
+								<td class="py-3 border-0 border-bottom border-light">
+									<span class="badge rounded-pill bg-{{
+										task.status == 'completed' ? 'success' :
+										(task.status == 'in_progress' ? 'warning text-dark' : 'secondary')
+									}} bg-opacity-10 text-{{
+										task.status == 'completed' ? 'success' :
+										(task.status == 'in_progress' ? 'warning text-dark' : 'secondary')
+									}} px-3 py-2 fw-bold border border-{{
+										task.status == 'completed' ? 'success' :
+										(task.status == 'in_progress' ? 'warning' : 'secondary')
+									}} border-opacity-25">
+										<i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i>
+										{{ task.status|replace({'_': ' '})|title }}
+									</span>
+								</td>
 
-							{# Edit — greyed out for soft-deleted, active for normal #}
-							{% if task.isDeleted %}
-								<button type="button" class="btn btn-sm" disabled title="Task is in read-only mode" style="background-color:#6c757d; color:#fff; opacity:0.5; cursor:not-allowed; border:none;">
-									<i class="bi bi-pencil"></i>
-									Edit
-								</button>
-							{% else %}
-								<a href="{{ path('app_task_edit', {'id': task.id}) }}" class="btn btn-sm btn-warning">
-									<i class="bi bi-pencil"></i>
-									Edit
-								</a>
-							{% endif %}
+								<td class="py-3 border-0 border-bottom border-light">
+									<span class="text-{{
+										task.priority == 'high' ? 'danger' :
+										(task.priority == 'medium' ? 'primary' : 'secondary')
+									}} fw-bold small text-uppercase" style="letter-spacing: 0.5px;">
+										{{ task.priority }}
+									</span>
+								</td>
 
-							{# Delete — always hard deletes permanently #}
-							<form method="post" action="{{ path('app_task_delete', {'id': task.id}) }}" style="display:inline">
-								<input type="hidden" name="_token" value="{{ csrf_token('delete' ~ task.id) }}">
-								<button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Permanently delete this task?')">
-									<i class="bi bi-trash"></i>
-									Delete
-								</button>
-							</form>
-						</td>
+								<td class="py-3 text-muted small border-0 border-bottom border-light fw-medium">
+									{{ task.createdAt|date('M d, Y') }}
+									<div class="text-secondary opacity-75" style="font-size: 0.75rem;">{{ task.createdAt|date('H:i') }}</div>
+								</td>
 
-					</tr>
-				{% else %}
-					<tr>
-						<td colspan="6" class="text-center text-muted py-4">
-							<i class="bi bi-inbox fs-4 d-block mb-2"></i>
-							No tasks found
-						</td>
-					</tr>
-				{% endfor %}
-			</tbody>
-		</table>
+								<td class="py-3 text-center border-0 border-bottom border-light">
+									{% if task.comments|length > 0 %}
+										<div class="d-inline-flex align-items-center justify-content-center bg-primary bg-opacity-10 text-primary rounded-circle fw-bold" style="width: 28px; height: 28px; font-size: 0.8rem;">
+											{{ task.comments|length }}
+										</div>
+									{% else %}
+										<span class="text-muted opacity-25">-</span>
+									{% endif %}
+								</td>
+
+								<td class="pe-4 py-3 text-end border-0 border-bottom border-light">
+									<div class="btn-group shadow-sm rounded-pill overflow-hidden bg-white border">
+										<a href="{{ path('app_task_show', {'id': task.id}) }}" class="btn btn-sm btn-light border-0 text-primary action-btn" title="View Details">
+											<i class="bi bi-eye"></i>
+										</a>
+										
+										{% if task.isDeleted %}
+											<button type="button" class="btn btn-sm btn-light border-0 text-muted border-start" disabled title="Read-only mode" style="opacity: 0.4;">
+												<i class="bi bi-pencil"></i>
+											</button>
+										{% else %}
+											<a href="{{ path('app_task_edit', {'id': task.id}) }}" class="btn btn-sm btn-light border-0 text-warning border-start action-btn" title="Edit Task">
+												<i class="bi bi-pencil"></i>
+											</a>
+										{% endif %}
+
+										<form method="post" action="{{ path('app_task_delete', {'id': task.id}) }}" class="m-0 p-0" style="display:inline">
+											<input type="hidden" name="_token" value="{{ csrf_token('delete' ~ task.id) }}">
+											<button type="submit" class="btn btn-sm btn-light border-0 text-danger border-start action-btn" onclick="return confirm('Permanently delete this task?')" title="Delete Task">
+												<i class="bi bi-trash"></i>
+											</button>
+										</form>
+									</div>
+								</td>
+
+							</tr>
+						{% else %}
+							<tr>
+								<td colspan="6" class="text-center text-muted py-5 border-0">
+									<div class="mb-3 opacity-25 text-primary">
+										<i class="bi bi-kanban" style="font-size: 4rem;"></i>
+									</div>
+									<h5 class="fw-bold text-dark">No tasks found</h5>
+									<p class="small text-muted mb-0">Try adjusting your filters or create a new task!</p>
+								</td>
+							</tr>
+						{% endfor %}
+					</tbody>
+				</table>
+			</div>
+		</div>
+
+		{# ── Pagination (KnpPaginator) ── #}
+		<div class="d-flex justify-content-between align-items-center mt-4 px-2">
+			<div class="text-muted small fw-medium">
+				Showing <span class="fw-bold text-dark">{{ pagination.getItemNumberPerPage() }}</span> per page 
+				<span class="mx-2 text-secondary opacity-25">|</span> 
+				<span class="fw-bold text-primary">{{ pagination.getTotalItemCount() }}</span> total tasks
+			</div>
+			<div>
+				{{ knp_pagination_render(pagination) }}
+			</div>
+		</div>
+
 	</div>
+
+	<style>
+		/* Premium UI Tweaks */
+		body { background-color: #f4f6f9; }
+		.custom-hover-row { transition: all 0.2s ease; }
+		.custom-hover-row:hover { background-color: #f8f9fa !important; transform: translateY(-1px); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); z-index: 10; position: relative;}
+		.action-btn { transition: background-color 0.2s ease; }
+		.action-btn:hover { background-color: #e9ecef !important; }
+		.form-control:focus, .form-select:focus { box-shadow: none; outline: 1px solid #dee2e6; }
+	</style>
 {% endblock %}

@@ -42,6 +42,71 @@ class TaskService
         return $this->taskRepository->findBy(['user' => $user]);
     }
 
+    /**
+     * Get QueryBuilder for filtered tasks.
+     * Used by KnpPaginator in the Controller.
+     */
+    public function getFilteredTasksByUser($user, array $filters = []): \Doctrine\ORM\QueryBuilder
+    {
+        $qb = $this->entityManager->createQueryBuilder()
+            ->select('t')
+            ->from(Task::class, 't')
+            ->where('t.user = :user')
+            ->andWhere('t.isDeleted = 0')
+            ->setParameter('user', $user);
+
+        // Filter by status
+        if (!empty($filters['status'])) {
+            $qb->andWhere('t.status = :status')
+               ->setParameter('status', $filters['status']);
+        }
+
+        // Search by title
+        if (!empty($filters['search'])) {
+            $qb->andWhere('t.title LIKE :search')
+               ->setParameter('search', '%' . $filters['search'] . '%');
+        }
+
+        // --- OLD MANUAL PAGINATION LOGIC (Commented out for learning) ---
+        /*
+        // Count total before pagination
+        $countQb = clone $qb;
+        $countQb->select('COUNT(t.id)');
+        $total = (int) $countQb->getQuery()->getSingleScalarResult();
+
+        // Sort
+        $sortField = $filters['sort'] ?? 'created_at';
+        $sortMap = [
+            'created_at' => 't.createdAt',
+            'priority'   => 't.priority',
+            'title'      => 't.title',
+            'status'     => 't.status',
+        ];
+        $orderBy = $sortMap[$sortField] ?? 't.createdAt';
+        $sortDir = (isset($filters['sort_dir']) && strtoupper($filters['sort_dir']) === 'ASC') ? 'ASC' : 'DESC';
+        $qb->orderBy($orderBy, $sortDir);
+
+        // Pagination
+        $perPage = (int) ($filters['show'] ?? 5);
+        $page = max(1, (int) ($filters['page'] ?? 1));
+        $qb->setFirstResult(($page - 1) * $perPage)
+           ->setMaxResults($perPage);
+
+        return [
+            'tasks'   => $qb->getQuery()->getResult(),
+            'total'   => $total,
+            'page'    => $page,
+            'perPage' => $perPage,
+            'pages'   => (int) ceil($total / $perPage),
+        ];
+        */
+
+        // NEW LOGIC FOR KNP PAGINATOR: 
+        // Just return the raw QueryBuilder with the filters applied.
+        // The KnpPaginatorBundle handles sorting and pagination automatically!
+        return $qb;
+    }
+
     public function createTask(string $title, string $description, string $status = 'pending'): Task
     {
         $user = $this->security->getUser();

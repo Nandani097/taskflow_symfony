@@ -14,6 +14,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Knp\Component\Pager\PaginatorInterface;
 
 class TaskController extends AbstractController
 {
@@ -24,12 +25,52 @@ class TaskController extends AbstractController
     ) {}
 
     #[Route('/tasks', name: 'app_task_index')]
-    public function index(): Response
+    public function index(Request $request, PaginatorInterface $paginator): Response
     {
-        $tasks = $this->taskService->getActiveTasksByUser($this->getUser());
+        $filters = [
+            'status'   => $request->query->get('status', ''),
+            'search'   => $request->query->get('search', ''),
+            'show'     => $request->query->getInt('show', 5),
+            
+            // KnpPaginator reads these automatically, but keep them in filters
+            // so filter form retains the selected state
+            'sort'     => $request->query->get('sort', 't.createdAt'),
+            'sort_dir' => $request->query->get('sort_dir', 'DESC'),
+        ];
+
+        $page = $request->query->getInt('page', 1);
+        $limit = $filters['show'];
+
+        // Get the raw QueryBuilder from service
+        $queryBuilder = $this->taskService->getFilteredTasksByUser($this->getUser(), $filters);
+
+        // -- OLD MANUAL APPROACH --
+        /*
+        $result = $this->taskService->getFilteredTasksByUser($this->getUser(), $filters);
+        return $this->render('task/index.html.twig', [
+            'tasks'   => $result['tasks'],
+            'total'   => $result['total'],
+            'page'    => $result['page'],
+            'pages'   => $result['pages'],
+            'perPage' => $result['perPage'],
+            'filters' => $filters,
+        ]);
+        */
+
+        // -- NEW KNP PAGINATOR APPROACH --
+        $pagination = $paginator->paginate(
+            $queryBuilder,      // The query to paginate
+            $page,              // Current page number
+            $limit,             // Items per page
+            [
+                'defaultSortFieldName' => 't.createdAt',
+                'defaultSortDirection' => 'desc'
+            ]
+        );
 
         return $this->render('task/index.html.twig', [
-            'tasks' => $tasks,
+            'pagination' => $pagination,
+            'filters'    => $filters,
         ]);
     }
 
