@@ -24,18 +24,20 @@ class CommentController extends AbstractController
     #[Route('/task/{id}/comment', name: 'app_comment_add', methods: ['POST'])]
     public function addComment(Request $request, Task $task): Response
     {
+        // $user = $this->getUser();
+        // dd($user);
         if ($task->getUser() !== $this->getUser()) {
             $this->addFlash('error', 'You cannot comment on this task');
             return $this->redirectToRoute('app_task_show', ['id' => $task->getId()]);
-        }
+        } 
 
-        // ✅ FIX 2 & 6: Use CommentType form — validates, checks CSRF, uses CommentService
+        // Use CommentType form — validates, checks CSRF, uses CommentService
         $comment = new Comment();
         $form = $this->createForm(CommentType::class, $comment);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            // ✅ FIX 6: Delegate saving to CommentService
+            // Delegate saving to CommentService
             $this->commentService->addComment($task, $this->getUser(), $comment->getContent());
 
             // Log via service
