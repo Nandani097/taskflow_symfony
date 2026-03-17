@@ -13,7 +13,8 @@ class TaskService
         private TaskRepository $taskRepository,
         private EntityManagerInterface $entityManager,
         private Security $security,
-        private ActivityLogService $activityLogService
+        private ActivityLogService $activityLogService,
+        private CacheService $cacheService
     ) {}
 
     public function getTask(int $id): ?Task
@@ -23,17 +24,17 @@ class TaskService
 
     public function getActiveTasksByUser($user): array
     {
-        // Show ALL tasks (including soft-deleted) on index
-        // Soft-deleted tasks just won't have Edit button (handled in template)
-        return $this->entityManager
-            ->createQueryBuilder()
-            ->select('t')
-            ->from(Task::class, 't')
-            ->where('t.user = :user')
-            ->setParameter('user', $user)
-            ->orderBy('t.createdAt', 'DESC')
-            ->getQuery()
-            ->getResult();
+        return $this->cacheService->getUserTasks($user, function () use ($user) {
+            return $this->entityManager
+                ->createQueryBuilder()
+                ->select('t')
+                ->from(Task::class, 't')
+                ->where('t.user = :user')
+                ->setParameter('user', $user)
+                ->orderBy('t.createdAt', 'DESC')
+                ->getQuery()
+                ->getResult();
+        });
     }
 
     public function getTasksByUser($user): array
@@ -58,6 +59,9 @@ class TaskService
         $this->entityManager->flush();
 
         $this->activityLogService->logTaskCreated($task, $user);
+
+        // Invalidate task list cache
+        $this->cacheService->invalidateUserTasks($user);
 
         return $task;
     }
@@ -88,6 +92,9 @@ class TaskService
         if ($statusChanged) {
             $this->activityLogService->logStatusChanged($task, $user, $oldStatus, $data['status']);
         }
+
+        // Invalidate task list cache
+        $this->cacheService->invalidateUserTasks($user);
     }
 
     public function deleteTask(Task $task): void
@@ -96,5 +103,8 @@ class TaskService
         $this->activityLogService->logTaskDeleted($task, $user);
         $this->entityManager->remove($task);
         $this->entityManager->flush();
+
+        // Invalidate task list cache
+        $this->cacheService->invalidateUserTasks($user);
     }
 }
