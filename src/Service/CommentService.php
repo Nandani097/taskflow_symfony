@@ -12,7 +12,8 @@ class CommentService
 {
     public function __construct(
         private CommentRepository $commentRepository,
-        private EntityManagerInterface $entityManager
+        private EntityManagerInterface $entityManager,
+        private CacheService $cacheService
     ) {}
 
     /**
@@ -29,6 +30,9 @@ class CommentService
         $this->entityManager->persist($comment);
         $this->entityManager->flush();
 
+        // Invalidate comment cache for this task
+        $this->cacheService->invalidateTaskComments($task);
+
         return $comment;
     }
 
@@ -37,7 +41,9 @@ class CommentService
      */
     public function getCommentsForTask(Task $task): array
     {
-        return $this->commentRepository->findByTask($task);
+        return $this->cacheService->getTaskComments($task, function () use ($task) {
+            return $this->commentRepository->findByTask($task);
+        });
     }
 
     /**
@@ -53,7 +59,11 @@ class CommentService
      */
     public function deleteComment(Comment $comment): void
     {
+        $task = $comment->getTask();
         $this->entityManager->remove($comment);
         $this->entityManager->flush();
+
+        // Invalidate comment cache for this task
+        $this->cacheService->invalidateTaskComments($task);
     }
 }
