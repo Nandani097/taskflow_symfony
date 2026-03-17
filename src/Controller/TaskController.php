@@ -8,6 +8,7 @@ use App\Form\TaskType;
 use App\Form\CommentType;
 use App\Service\TaskService;
 use App\Service\ActivityLogService;
+use App\Service\CacheService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -18,13 +19,13 @@ class TaskController extends AbstractController
 {
     public function __construct(
         private TaskService $taskService,
-        private ActivityLogService $activityLogService
+        private ActivityLogService $activityLogService,
+        private CacheService $cacheService
     ) {}
 
     #[Route('/tasks', name: 'app_task_index')]
     public function index(): Response
     {
-        // Only show non-deleted tasks on index
         $tasks = $this->taskService->getActiveTasksByUser($this->getUser());
 
         return $this->render('task/index.html.twig', [
@@ -41,7 +42,6 @@ class TaskController extends AbstractController
         return null;
     }
 
-    // ✅ MUST be before /task/{id}
     #[Route('/task/new', name: 'app_task_new')]
     public function new(Request $request, EntityManagerInterface $entityManager): Response
     {
@@ -58,6 +58,9 @@ class TaskController extends AbstractController
             $entityManager->flush();
 
             $this->activityLogService->logTaskCreated($task, $this->getUser());
+            
+            // Invalidate task list cache so the new task appears
+            $this->cacheService->invalidateUserTasks($this->getUser());
 
             $this->addFlash('success', 'Task created!');
             return $this->redirectToRoute('app_task_index');
@@ -138,6 +141,9 @@ class TaskController extends AbstractController
                 );
             }
 
+            // Invalidate task list cache so the updated task appears
+            $this->cacheService->invalidateUserTasks($this->getUser());
+
             $this->addFlash('success', 'Task updated successfully!');
             return $this->redirectToRoute('app_task_show', ['id' => $task->getId()]);
         }
@@ -148,7 +154,7 @@ class TaskController extends AbstractController
         ]);
     }
 
-    // ✅ SOFT DELETE — called from show page
+    // SOFT DELETE — called from show page
     #[Route('/task/{id}/soft-delete', name: 'app_task_soft_delete', methods: ['POST'])]
     public function softDelete(Request $request, int $id, EntityManagerInterface $entityManager): Response
     {
@@ -169,6 +175,9 @@ class TaskController extends AbstractController
             // Log the deletion event
             $this->activityLogService->logTaskDeleted($task, $this->getUser());
 
+            // Invalidate task list cache
+            $this->cacheService->invalidateUserTasks($this->getUser());
+
             $this->addFlash('info', 'Task moved to read-only mode.');
         }
 
@@ -176,7 +185,7 @@ class TaskController extends AbstractController
         return $this->redirectToRoute('app_task_show', ['id' => $task->getId()]);
     }
 
-    // ✅ HARD DELETE — called from index page only
+    // HARD DELETE — called from index page only
     #[Route('/task/{id}/delete', name: 'app_task_delete', methods: ['POST'])]
     public function delete(Request $request, int $id, EntityManagerInterface $entityManager): Response
     {
@@ -193,6 +202,9 @@ class TaskController extends AbstractController
         if ($this->isCsrfTokenValid('delete' . $task->getId(), $request->request->get('_token'))) {
             $entityManager->remove($task);
             $entityManager->flush();
+
+            // Invalidate task list cache
+            $this->cacheService->invalidateUserTasks($this->getUser());
 
             $this->addFlash('success', 'Task permanently deleted.');
         }
