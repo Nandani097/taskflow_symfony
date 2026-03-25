@@ -9,11 +9,12 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
+use Psr\Log\LoggerInterface;
 
 class RegistrationController extends AbstractController
 {
     #[Route('/register', name: 'app_register')]
-    public function register(Request $request, UserPasswordHasherInterface $passwordHasher, EntityManagerInterface $entityManager): Response
+    public function register(Request $request, UserPasswordHasherInterface $passwordHasher, EntityManagerInterface $entityManager, LoggerInterface $authLogger): Response
     {
         if ($request->isMethod('POST')) {
             $username = $request->request->get('username');
@@ -23,6 +24,9 @@ class RegistrationController extends AbstractController
             // Check if user already exists
             $existingUser = $entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
             if ($existingUser) {
+                // [CUSTOM LOGGING] Write to var/log/auth.log
+                $authLogger->warning('Registration failed: Email already exists.', ['email' => $email]);
+                
                 $this->addFlash('error', 'Email already exists!');
                 return $this->redirectToRoute('app_register');
             }
@@ -35,6 +39,9 @@ class RegistrationController extends AbstractController
             
             $entityManager->persist($user);
             $entityManager->flush();
+            
+            // [CUSTOM LOGGING] Write to var/log/auth.log
+            $authLogger->info('New user registered successfully.', ['email' => $email, 'username' => $username]);
             
             $this->addFlash('success', 'Account created! You can now login.');
             return $this->redirectToRoute('app_login');

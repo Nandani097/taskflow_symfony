@@ -52,7 +52,7 @@ class TaskService
             ->select('t')
             ->from(Task::class, 't')
             ->where('t.user = :user')
-            ->andWhere('t.isDeleted = 0')
+            // ->andWhere('t.isDeleted = 0')
             ->setParameter('user', $user);
 
         // Filter by status

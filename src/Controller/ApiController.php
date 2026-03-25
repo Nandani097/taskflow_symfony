@@ -18,8 +18,9 @@ class ApiController extends AbstractController
     public function tasks(): JsonResponse
     {
         $results = $this->entityManager->createQueryBuilder()
-            ->select('t.id, t.title, t.status, t.priority, t.createdAt, COUNT(c.id) AS comment_count')
+            ->select('t.id, t.title, t.status, t.priority, t.createdAt, u.username AS owner, COUNT(c.id) AS comment_count')
             ->from(Task::class, 't')
+            ->leftJoin('t.user', 'u')
             ->leftJoin('t.comments', 'c')
             ->where('t.isDeleted = 0')
             ->groupBy('t.id')
@@ -35,6 +36,7 @@ class ApiController extends AbstractController
                 'title'         => $row['title'],
                 'status'        => $row['status'],
                 'priority'      => $row['priority'],
+                'owner'         => $row['owner'],
                 'created_at'    => $row['createdAt']->format('Y-m-d H:i:s'),
                 'comment_count' => (int) $row['comment_count'],
             ];

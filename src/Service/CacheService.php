@@ -24,10 +24,6 @@ class CacheService
 
     // ──────────────── Task List Cache ────────────────
 
-    /**
-     * Cache task IDs for a user. On cache hit, re-fetch fresh entities from DB by IDs.
-     * This avoids Doctrine entity serialization issues while still caching the expensive query.
-     */
     public function getUserTasks(User $user, callable $fetchCallback): array
     {
         $key = 'user_tasks_' . $user->getId();
@@ -35,9 +31,11 @@ class CacheService
 
         $taskIds = $this->cache->get($key, function (ItemInterface $item) use ($fetchCallback, $key, &$cacheHit) {
             $item->expiresAfter(self::CACHE_TTL);
+            
             $cacheHit = false;
             $tasks = $fetchCallback();
             $ids = array_map(fn(Task $task) => $task->getId(), $tasks);
+            
             $this->logger->info('Cache MISS: "{key}" — fetched {count} tasks from database, stored in Redis', [
                 'key' => $key,
                 'count' => count($ids),
@@ -66,13 +64,11 @@ class CacheService
             ->getResult();
     }
 
-    /**
-     * Invalidate task list cache when a task is created/updated/deleted.
-     */
     public function invalidateUserTasks(User $user): void
     {
         $key = 'user_tasks_' . $user->getId();
         $this->cache->delete($key);
+        
         $this->logger->info('Cache INVALIDATED: "{key}" — task list cache cleared', [
             'key' => $key,
         ]);
@@ -80,9 +76,6 @@ class CacheService
 
     // ──────────────── Activity Log Cache ────────────────
 
-    /**
-     * Cache activity log IDs for a task.
-     */
     public function getTaskActivityLogs(Task $task, callable $fetchCallback): array
     {
         $key = 'task_logs_' . $task->getId();
@@ -90,10 +83,12 @@ class CacheService
 
         $logIds = $this->cache->get($key, function (ItemInterface $item) use ($fetchCallback, $key, &$cacheHit) {
             $item->expiresAfter(self::CACHE_TTL);
+            
             $cacheHit = false;
             $logs = $fetchCallback();
             $ids = array_map(fn(ActivityLog $log) => $log->getId(), $logs);
-            $this->logger->info('Cache MISS: "{key}" — fetched {count} activity logs from database, stored in Redis', [
+            
+            $this->logger->info('Cache MISS: "{key}" — fetched {count} activity logs from DB, stored in Redis', [
                 'key' => $key,
                 'count' => count($ids),
             ]);
@@ -121,23 +116,18 @@ class CacheService
             ->getResult();
     }
 
-    /**
-     * Invalidate activity log cache when a new log is added.
-     */
     public function invalidateTaskActivityLogs(Task $task): void
     {
         $key = 'task_logs_' . $task->getId();
         $this->cache->delete($key);
-        $this->logger->info('Cache INVALIDATED: "{key}" — activity log cache cleared', [
+        
+        $this->logger->info('Cache INVALIDATED: "{key}" — activity log caches cleared', [
             'key' => $key,
         ]);
     }
 
     // ──────────────── Comment Cache ────────────────
 
-    /**
-     * Cache comment IDs for a task.
-     */
     public function getTaskComments(Task $task, callable $fetchCallback): array
     {
         $key = 'task_comments_' . $task->getId();
@@ -145,10 +135,12 @@ class CacheService
 
         $commentIds = $this->cache->get($key, function (ItemInterface $item) use ($fetchCallback, $key, &$cacheHit) {
             $item->expiresAfter(self::CACHE_TTL);
+            
             $cacheHit = false;
             $comments = $fetchCallback();
             $ids = array_map(fn(Comment $comment) => $comment->getId(), $comments);
-            $this->logger->info('Cache MISS: "{key}" — fetched {count} comments from database, stored in Redis', [
+            
+            $this->logger->info('Cache MISS: "{key}" — fetched {count} comments from DB, stored in Redis', [
                 'key' => $key,
                 'count' => count($ids),
             ]);
@@ -176,14 +168,12 @@ class CacheService
             ->getResult();
     }
 
-    /**
-     * Invalidate comment cache when a comment is added/deleted.
-     */
     public function invalidateTaskComments(Task $task): void
     {
         $key = 'task_comments_' . $task->getId();
         $this->cache->delete($key);
-        $this->logger->info('Cache INVALIDATED: "{key}" — comment cache cleared', [
+        
+        $this->logger->info('Cache INVALIDATED: "{key}" — comment caches cleared', [
             'key' => $key,
         ]);
     }

@@ -15,6 +15,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Knp\Component\Pager\PaginatorInterface;
+use Psr\Log\LoggerInterface;
 
 class TaskController extends AbstractController
 {
@@ -25,8 +26,12 @@ class TaskController extends AbstractController
     ) {}
 
     #[Route('/tasks', name: 'app_task_index')]
-    public function index(Request $request, PaginatorInterface $paginator): Response
+    public function index(Request $request, PaginatorInterface $paginator, LoggerInterface $taskActivityLogger): Response
     {
+        // [CUSTOM LOGGING] Write to var/log/task_activity.log
+        $userIdentifier = $this->getUser() ? $this->getUser()->getUserIdentifier() : 'anonymous';
+        $taskActivityLogger->info('User viewed the task list dashboard.', ['user' => $userIdentifier]);
+
         $filters = [
             'status'   => $request->query->get('status', ''),
             'search'   => $request->query->get('search', ''),
@@ -84,8 +89,11 @@ class TaskController extends AbstractController
     }
 
     #[Route('/task/new', name: 'app_task_new')]
-    public function new(Request $request, EntityManagerInterface $entityManager): Response
+    public function new(Request $request, EntityManagerInterface $entityManager, LoggerInterface $taskActivityLogger): Response
     {
+        // [CUSTOM LOGGING] Write to var/log/task_activity.log
+        $taskActivityLogger->info('User opened the new task form.');
+        
         $task = new Task();
         $form = $this->createForm(TaskType::class, $task);
         $form->handleRequest($request);
@@ -97,6 +105,9 @@ class TaskController extends AbstractController
 
             $entityManager->persist($task);
             $entityManager->flush();
+
+            // [CUSTOM LOGGING] Log when task is successfully saved
+            $taskActivityLogger->info('Task successfully created.', ['task_id' => $task->getId(), 'title' => $task->getTitle()]);
 
             $this->activityLogService->logTaskCreated($task, $this->getUser());
             
@@ -113,17 +124,22 @@ class TaskController extends AbstractController
     }
 
     #[Route('/task/{id}', name: 'app_task_show', requirements: ['id' => '\d+'])]
-    public function show(int $id): Response
+    public function show(int $id, LoggerInterface $taskActivityLogger): Response
     {
         $task = $this->taskService->getTask($id);
 
         if (!$task) {
+            $taskActivityLogger->warning('User tried to view a non-existent task.', ['task_id' => $id]);
             throw $this->createNotFoundException('Task not found');
         }
 
         if ($response = $this->checkTaskOwner($task)) {
+            $taskActivityLogger->warning('User tried to view a task they do not own.', ['task_id' => $id]);
             return $response;
         }
+
+        // [CUSTOM LOGGING] Log view
+        $taskActivityLogger->info('User viewed task details.', ['task_id' => $task->getId()]);
 
         // Only show the 3 allowed event types in activity log
         $activityLogs = $this->activityLogService->getReadOnlyLogsForTask($task);
@@ -146,23 +162,28 @@ class TaskController extends AbstractController
     }
 
     #[Route('/task/{id}/edit', name: 'app_task_edit', requirements: ['id' => '\d+'])]
-    public function edit(Request $request, int $id, EntityManagerInterface $entityManager): Response
+    public function edit(Request $request, int $id, EntityManagerInterface $entityManager, LoggerInterface $taskActivityLogger): Response
     {
         $task = $this->taskService->getTask($id);
 
         if (!$task) {
+            $taskActivityLogger->warning('User tried to edit a non-existent task.', ['task_id' => $id]);
             throw $this->createNotFoundException('Task not found');
         }
 
         if ($response = $this->checkTaskOwner($task)) {
+            $taskActivityLogger->warning('User tried to edit a task they do not own.', ['task_id' => $id]);
             return $response;
         }
 
         // Block editing a soft-deleted task
         if ($task->isDeleted()) {
+            $taskActivityLogger->warning('User tried to edit a read-only soft-deleted task.', ['task_id' => $id]);
             $this->addFlash('error', 'This task is deleted and cannot be edited.');
             return $this->redirectToRoute('app_task_show', ['id' => $task->getId()]);
         }
+
+        $taskActivityLogger->info('User opened the edit task form.', ['task_id' => $task->getId()]);
 
         $oldStatus = $task->getStatus();
 
@@ -181,6 +202,9 @@ class TaskController extends AbstractController
                     $task->getStatus()
                 );
             }
+            
+            // [CUSTOM LOGGING] Log update success
+            $taskActivityLogger->info('Task successfully updated.', ['task_id' => $task->getId()]);
 
             // Invalidate task list cache so the updated task appears
             $this->cacheService->invalidateUserTasks($this->getUser());
@@ -197,7 +221,7 @@ class TaskController extends AbstractController
 
     // SOFT DELETE — called from show page
     #[Route('/task/{id}/soft-delete', name: 'app_task_soft_delete', methods: ['POST'])]
-    public function softDelete(Request $request, int $id, EntityManagerInterface $entityManager): Response
+    public function softDelete(Request $request, int $id, EntityManagerInterface $entityManager, LoggerInterface $taskActivityLogger): Response
     {
         $task = $this->taskService->getTask($id);
 
@@ -212,6 +236,9 @@ class TaskController extends AbstractController
         if ($this->isCsrfTokenValid('soft-delete' . $task->getId(), $request->request->get('_token'))) {
             $task->setIsDeleted(true);
             $entityManager->flush();
+
+            // [CUSTOM LOGGING] Log soft delete
+            $taskActivityLogger->info('Task moved to read-only mode (soft delete).', ['task_id' => $task->getId()]);
 
             // Log the deletion event
             $this->activityLogService->logTaskDeleted($task, $this->getUser());
@@ -228,7 +255,7 @@ class TaskController extends AbstractController
 
     // HARD DELETE — called from index page only
     #[Route('/task/{id}/delete', name: 'app_task_delete', methods: ['POST'])]
-    public function delete(Request $request, int $id, EntityManagerInterface $entityManager): Response
+    public function delete(Request $request, int $id, EntityManagerInterface $entityManager, LoggerInterface $taskActivityLogger): Response
     {
         $task = $this->taskService->getTask($id);
 
@@ -243,6 +270,9 @@ class TaskController extends AbstractController
         if ($this->isCsrfTokenValid('delete' . $task->getId(), $request->request->get('_token'))) {
             $entityManager->remove($task);
             $entityManager->flush();
+            
+            // [CUSTOM LOGGING] Log hard delete
+            $taskActivityLogger->info('Task permanently deleted.', ['task_id' => $id]);
 
             // Invalidate task list cache
             $this->cacheService->invalidateUserTasks($this->getUser());

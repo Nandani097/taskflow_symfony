@@ -1,6 +1,10 @@
 monolog:
     channels:
         - deprecation # Deprecations are logged in the dedicated "deprecation" channel when it exists
+        
+        # 1. Define custom channels for specific logic
+        - 'auth'          # Used for login/logout/registration logs
+        - 'task_activity' # Used for all task CRUD operations (create, view, edit, delete)
 
 when@dev:
     monolog:
@@ -9,7 +13,22 @@ when@dev:
                 type: stream
                 path: "%kernel.logs_dir%/%kernel.environment%.log"
                 level: debug
-                channels: ["!event"]
+                # Exclude custom channels so they don't bloat the main dev.log
+                channels: ["!event", "!auth", "!task_activity"]
+                
+            # 2. Create specific handlers for each channel to write to separate files
+            auth_handler:
+                type: stream
+                path: "%kernel.logs_dir%/auth.log"
+                level: debug
+                channels: ["auth"]
+                
+            task_activity_handler:
+                type: stream
+                path: "%kernel.logs_dir%/task_activity.log"
+                level: debug
+                channels: ["task_activity"]
+
             console:
                 type: console
                 process_psr_3_messages: false

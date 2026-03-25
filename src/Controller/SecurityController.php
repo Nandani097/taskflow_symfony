@@ -6,20 +6,27 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
+use Psr\Log\LoggerInterface;
 
 class SecurityController extends AbstractController
 {
     #[Route('/login', name: 'app_login')]
-    public function login(AuthenticationUtils $authenticationUtils): Response
+    public function login(AuthenticationUtils $authenticationUtils, LoggerInterface $authLogger): Response
     {
         // If already logged in, redirect to tasks
         if ($this->getUser()) {
+            // [CUSTOM LOGGING] This writes specifically to var/log/auth.log
+            $authLogger->info('User hit login page but is already logged in: ' . $this->getUser()->getUserIdentifier());
             return $this->redirectToRoute('app_task_index');
         }
 
         // Get login error if there is one
         $error = $authenticationUtils->getLastAuthenticationError();
-        
+        if ($error) {
+            // [CUSTOM LOGGING] This writes specifically to var/log/auth.log
+            $authLogger->warning('Failed login attempt.', ['error' => $error->getMessage()]);
+        }
+
         // Last username entered
         $lastUsername = $authenticationUtils->getLastUsername();
 
